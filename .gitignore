@@ -1,3 +1,9 @@
+# Project Specific Git Ignore File
+input/*
+!input/sample.png
+output/*
+!output/sample
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
