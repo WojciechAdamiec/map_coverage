@@ -1,5 +1,7 @@
 from PIL import Image
 from dataclasses import dataclass
+from board_generator import prepare_board
+from mark_terrain import mark_terrain
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -24,7 +26,6 @@ OPTIMAL_COVERAGE = float(33)
 class MapImages:
     photo_path: str
     board_path: str
-    orthogonal_path: str
     coverage_path: str
 
 
@@ -49,41 +50,17 @@ class DataExecutor:
             src_path = os.path.join(INPUT_DIR, filename)
             self.make_photo_image(src_path, output_dir, filename)
             self.make_board_image(src_path, output_dir, filename)
-            self.make_orthogonal_image(src_path, output_dir, filename)
             self.make_coverage_image(src_path, output_dir, filename)
 
     def make_photo_image(self, src_path, output_dir, filename):
         shutil.copy(src_path, os.path.join(output_dir, f"photo_{filename}"))
 
     def make_board_image(self, src_path, output_dir, filename):
-        shutil.copy(src_path, os.path.join(output_dir, f"board_{filename}"))
-
-    def make_orthogonal_image(self, src_path, output_dir, filename):
-        shutil.copy(src_path, os.path.join(output_dir, f"orthogonal_{filename}"))
+        prepare_board(src_path, os.path.join(output_dir, f"board_{filename}"))
 
     def make_coverage_image(self, src_path, output_dir, filename):
-        img = Image.open(os.path.join(output_dir, f"orthogonal_{filename}")).convert('L')
-        arr = np.array(img)
-
-        black_pixels = np.sum(arr < THRESHOLD)
-        total_pixels = arr.size
-        coverage = (black_pixels / total_pixels) * 100
+        coverage = mark_terrain(os.path.join(output_dir, f"board_{filename}"), os.path.join(output_dir, f"coverage_{filename}"))
         self.input_images[filename] = coverage
-
-        base = Image.open(os.path.join(output_dir, f"orthogonal_{filename}")).convert('RGBA')
-
-        overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
-        overlay_pixels = overlay.load()
-        width, height = base.size
-
-        for x in range(width):
-            for y in range(height):
-                gray = img.getpixel((x, y))
-                if gray < THRESHOLD:
-                    overlay_pixels[x, y] = (255, 0, 0, 80)
-        
-        result = Image.alpha_composite(base, overlay)
-        result.save(os.path.join(output_dir, f"coverage_{filename}"))
 
     def display(self):
         for filename in self.input_images.keys():
@@ -104,7 +81,6 @@ class DataPresenter:
         self.map_images = MapImages(
             photo_path=self._load_image_type(filenames, "photo"),
             board_path=self._load_image_type(filenames, "board"),
-            orthogonal_path=self._load_image_type(filenames, "orthogonal"),
             coverage_path=self._load_image_type(filenames, "coverage"),
         )
 
@@ -119,13 +95,12 @@ class DataPresenter:
 
 
     def display(self, coverage):
-        fig, axes = plt.subplots(2, 2, figsize=(8, 8))
+        fig, axes = plt.subplots(1, 3, figsize=(8, 4), dpi=160)
         axes = axes.flatten()
 
         images = [
             self.map_images.photo_path,
             self.map_images.board_path,
-            self.map_images.orthogonal_path,
             self.map_images.coverage_path,
         ]
 
@@ -134,7 +109,7 @@ class DataPresenter:
         else:
             percentage_of_optimal = coverage / OPTIMAL_COVERAGE
             relative_missing = 100 / percentage_of_optimal - 100
-            text = f"Terrain Coverage: {coverage:.2f}% Recommended minimum is 33%\nAdd additional {relative_missing:.2f}% coverage of what you already have."
+            text = f"Terrain Coverage: {coverage:.2f}% Recommended minimum is 33%\nAdd additional {relative_missing:.2f}% terrains of what you already have."
 
 
         for ax, img_path in zip(axes, images):
