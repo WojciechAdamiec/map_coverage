@@ -68,7 +68,7 @@ class DataExecutor:
             presenter = DataPresenter()
             presenter.load_images(output_dir)
             logger.info(f"Displayed coverage for {filename}: {self.input_images[filename]:.2f}%")
-            presenter.display(coverage=self.input_images[filename])
+            presenter.display(coverage=self.input_images[filename], output_dir=output_dir)
 
 
 class DataPresenter:
@@ -94,7 +94,7 @@ class DataPresenter:
         return None
 
 
-    def display(self, coverage):
+    def display(self, coverage, output_dir):
         fig, axes = plt.subplots(1, 3, figsize=(8, 4), dpi=160)
         axes = axes.flatten()
 
@@ -104,13 +104,14 @@ class DataPresenter:
             self.map_images.coverage_path,
         ]
 
-        if coverage >= OPTIMAL_COVERAGE:
-            text = f"Terrain Coverage: {coverage:.2f}% Recommended minimum is 33%\nYou have optimal coverage!"
-        else:
-            percentage_of_optimal = coverage / OPTIMAL_COVERAGE
-            relative_missing = 100 / percentage_of_optimal - 100
-            text = f"Terrain Coverage: {coverage:.2f}% Recommended minimum is 33%\nAdd additional {relative_missing:.2f}% terrains of what you already have."
+        # if coverage >= OPTIMAL_COVERAGE:
+        #     text = f"Terrain Coverage: {coverage:.2f}% Recommended minimum is 33%\nYou have optimal coverage!"
+        # else:
+        #     percentage_of_optimal = coverage / OPTIMAL_COVERAGE
+        #     relative_missing = 100 / percentage_of_optimal - 100
+        #     text = f"Terrain Coverage: {coverage:.2f}% Recommended minimum is 33%\nAdd additional {relative_missing:.2f}% terrains of what you already have."
 
+        text = f"Terrain Coverage: {coverage:.2f}%."
 
         for ax, img_path in zip(axes, images):
             img = mpimg.imread(img_path)
@@ -120,8 +121,10 @@ class DataPresenter:
         fig.suptitle(text, fontsize=16)
 
         plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, "overview.png"))
         plt.show()
-
+        plt.close()
+        
 
 data_executor = DataExecutor()
 data_executor.execute()
